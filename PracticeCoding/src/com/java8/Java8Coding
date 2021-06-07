@@ -1,0 +1,27 @@
+/**
+ * 
+ */
+package com.Coding.Java8;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.OptionalDouble;
+
+/**
+ * @author mohd.hussa
+ * 
+ * Given a list of numbers, square them and filter the numbers which are greater 10000 and then find average of them.( Java 8 APIs only)
+ *
+ */
+public class Example {
+	
+	public static void main(String[] args) {
+		List<Integer> numbers = Arrays.asList(1000,1100,220,30,44);
+		//Integer sum = numbers.stream().mapToInt(Integer::intValue).sum();
+		System.out.println("Number greater than 10000 ");
+		numbers.stream().map(i->i*i).filter(i->i>10000).forEach(System.out::println);
+	    OptionalDouble avg =	numbers.stream().map(i->i*i).filter(i->i>10000).mapToInt(Integer::intValue).average();
+        System.out.println("average is " +avg);		
+	}
+
+}
