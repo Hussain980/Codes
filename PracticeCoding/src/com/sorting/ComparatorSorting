@@ -1,0 +1,39 @@
+package com.java.practice;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class ComparatorSorting {
+	
+	public static void main(String[] args) {
+		 Student s1 = new Student(101, "Hussain", "hu@gmail.com", 79879879);
+		 Student s2 = new Student(103, "Simran", "S@gmail.com", 9899893);
+		 Student s3 = new Student(102, "John", "joh@gmail.com", 798799);
+		 Student s4 = new Student(105, "Peter", "p@gmail.com", 7987983);
+		 
+		 List<Student> students = new ArrayList<>();
+		 students.add(s1);
+		 students.add(s2);
+		 students.add(s3);
+		 students.add(s4);
+		 
+		 // sorting based on name
+		// students.stream().sorted(Comparator.comparing(Student::getName)).forEach(System.out::println); // first way
+		 
+		// students.stream().sorted((e1,e2)->e1.getName().compareTo(e2.getName())).forEach(System.out::println); // second way for ascending
+		 
+		 //students.stream().sorted((e1,e2)->e2.getName().compareTo(e1.getName())).forEach(System.out::println); // for descending
+		 
+		 
+		 //sorting based on id
+		// students.stream().sorted(Comparator.comparing(Student::getId)).forEach(System.out::println);
+		 
+		 students.stream().sorted((o1,o2)->o1.getId()-o2.getId()).forEach(System.out::println); // ascending order
+		 
+		 students.stream().sorted((o1,o2)->o2.getId()-o1.getId()).forEach(System.out::println); // descending order
+		 
+		 
+		 
+	}
+
+}
