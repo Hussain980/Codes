@@ -86,3 +86,38 @@ BEGIN
 END $$
 
 DELIMITER ;
+
+
+------------------------------------------------
+
+DELIMITER $$
+
+CREATE PROCEDURE DeleteOldRecords(IN p_limit INT, IN p_date DATE)
+BEGIN
+    DECLARE rows_affected INT DEFAULT 1;
+
+    delete_loop: WHILE rows_affected > 0 DO
+        -- Start a transaction
+        START TRANSACTION;
+
+        -- Perform the batch delete
+        DELETE FROM a
+        WHERE a_id IN (
+            SELECT a_id
+            FROM (
+                SELECT a_id
+                FROM a
+                WHERE created_time < p_date
+                LIMIT p_limit
+            ) AS subquery
+        );
+
+        -- Get the number of affected rows
+        SET rows_affected = ROW_COUNT();
+
+        -- Commit the transaction
+        COMMIT;
+    END WHILE;
+END $$
+
+DELIMITER ;
