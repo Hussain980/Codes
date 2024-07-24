@@ -42,3 +42,8 @@ BEGIN
 END $$
 
 DELIMITER ;
+
+
+
+CALL DeleteOldRecords(100, '2023-05-30');
+
