@@ -121,3 +121,47 @@ BEGIN
 END $$
 
 DELIMITER ;
+
+
+------------------------------------
+
+
+DELIMITER $$
+
+CREATE PROCEDURE DeleteOldRecords(IN p_limit INT, IN p_date DATETIME)
+BEGIN
+    DECLARE rows_affected INT DEFAULT 0;
+
+    delete_loop: LOOP
+        -- Create a temporary table to hold the IDs to be deleted
+        CREATE TEMPORARY TABLE IF NOT EXISTS temp_ids (a_id INT);
+
+        -- Insert IDs into the temporary table
+        INSERT INTO temp_ids (a_id)
+        SELECT a_id
+        FROM a
+        WHERE created_time < p_date
+        LIMIT p_limit;
+
+        -- Get the number of rows inserted
+        SET rows_affected = (SELECT COUNT(*) FROM temp_ids);
+
+        -- Delete from the main table using the IDs from the temporary table
+        DELETE FROM a
+        WHERE a_id IN (SELECT a_id FROM temp_ids);
+
+        -- Drop the temporary table
+        DROP TEMPORARY TABLE IF EXISTS temp_ids;
+
+        -- Commit the transaction
+        COMMIT;
+
+        -- Exit loop if no rows were deleted
+        IF rows_affected = 0 THEN
+            LEAVE delete_loop;
+        END IF;
+    END LOOP delete_loop;
+END $$
+
+DELIMITER ;
+
