@@ -1,0 +1,44 @@
+DELIMITER $$
+
+CREATE PROCEDURE DeleteOldRecords(IN p_limit INT, IN p_date DATE)
+BEGIN
+    DECLARE v_done INT DEFAULT 0;
+    DECLARE v_a_id INT;
+    
+    DECLARE cur CURSOR FOR
+        SELECT a_id
+        FROM a
+        WHERE created_time < p_date
+        LIMIT p_limit;
+
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET v_done = 1;
+
+    delete_loop: LOOP
+        -- Start transaction
+        START TRANSACTION;
+        
+        OPEN cur;
+
+        delete_inner_loop: LOOP
+            FETCH cur INTO v_a_id;
+
+            IF v_done THEN
+                LEAVE delete_inner_loop;
+            END IF;
+
+            DELETE FROM a WHERE a_id = v_a_id;
+        END LOOP delete_inner_loop;
+
+        CLOSE cur;
+
+        -- Commit transaction
+        COMMIT;
+
+        -- Exit outer loop if no rows were deleted
+        IF v_done THEN
+            LEAVE delete_loop;
+        END IF;
+    END LOOP delete_loop;
+END $$
+
+DELIMITER ;
