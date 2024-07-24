@@ -47,3 +47,42 @@ DELIMITER ;
 
 CALL DeleteOldRecords(100, '2023-05-30');
 
+--- without cursor --------------
+
+
+DELIMITER $$
+
+CREATE PROCEDURE DeleteOldRecords(IN p_limit INT, IN p_date DATE)
+BEGIN
+    DECLARE rows_affected INT DEFAULT 0;
+
+    delete_loop: LOOP
+        -- Start a transaction
+        START TRANSACTION;
+
+        -- Perform the batch delete
+        DELETE FROM a
+        WHERE a_id IN (
+            SELECT a_id
+            FROM (
+                SELECT a_id
+                FROM a
+                WHERE created_time < p_date
+                LIMIT p_limit
+            ) AS subquery
+        );
+
+        -- Get the number of affected rows
+        SET rows_affected = ROW_COUNT();
+
+        -- Commit the transaction
+        COMMIT;
+
+        -- Exit loop if no rows were deleted
+        IF rows_affected = 0 THEN
+            LEAVE delete_loop;
+        END IF;
+    END LOOP delete_loop;
+END $$
+
+DELIMITER ;
