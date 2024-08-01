@@ -1,0 +1,54 @@
+CREATE OR REPLACE PROCEDURE pmt_partition_drop_proc(IN max_to_keep INT, IN atable_name VARCHAR(255))
+BEGIN
+    DECLARE bDone INT DEFAULT 0;
+    DECLARE counter INT DEFAULT 0;
+    DECLARE cur_par VARCHAR(255);
+    DECLARE dropped_count INT DEFAULT 0;
+    DECLARE fk_name VARCHAR(255);
+
+    DECLARE par_curs CURSOR FOR 
+        SELECT PARTITION_NAME
+        FROM information_schema.PARTITIONS
+        WHERE TABLE_NAME = atable_name
+        ORDER BY PARTITION_ORDINAL_POSITION DESC;
+
+    DECLARE fk_curs CURSOR FOR
+        SELECT CONSTRAINT_NAME
+        FROM information_schema.REFERENTIAL_CONSTRAINTS
+        WHERE UNIQUE_CONSTRAINT_NAME = CONCAT(atable_name, '_PRIMARY') AND TABLE_NAME = atable_name;
+
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET bDone = 1;
+
+    OPEN par_curs;
+    REPEAT
+        FETCH par_curs INTO cur_par;
+        SET counter = counter + 1;
+
+        IF counter > max_to_keep THEN
+            -- Check and drop foreign key relationships
+            OPEN fk_curs;
+            REPEAT
+                FETCH fk_curs INTO fk_name;
+                IF NOT bDone THEN
+                    SET @drop_fk_stmt = CONCAT('ALTER TABLE ', atable_name, ' DROP FOREIGN KEY ', fk_name);
+                    PREPARE stmt FROM @drop_fk_stmt;
+                    EXECUTE stmt;
+                    DEALLOCATE PREPARE stmt;
+                END IF;
+            UNTIL bDone END REPEAT;
+            CLOSE fk_curs;
+
+            -- Drop the partition
+            SET @drop_partition_stmt = CONCAT('ALTER TABLE ', atable_name, ' DROP PARTITION IF EXISTS ', cur_par);
+            PREPARE stmt FROM @drop_partition_stmt;
+            EXECUTE stmt;
+            DEALLOCATE PREPARE stmt;
+
+            SET dropped_count = dropped_count + 1;
+        END IF;
+
+    UNTIL bDone END REPEAT;
+    CLOSE par_curs;
+
+    SELECT counter AS 'counter', dropped_count AS 'dropped';
+END;
