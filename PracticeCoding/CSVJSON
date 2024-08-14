@@ -134,3 +134,23 @@ public class JsonPopulatorService {
         throw new IllegalArgumentException("Header not found: " + headerName);
     }
 }
+-----------------------------
+
+import com.opencsv.CSVReader;
+import com.opencsv.exceptions.CsvException;
+
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+public class CsvReaderService {
+
+    public List<String[]> readCsv(String filePath) throws IOException, CsvException {
+        try (CSVReader reader = new CSVReader(new FileReader(filePath))) {
+            List<String[]> records = new ArrayList<>();
+            records = reader.readAll();
+            return records;
+        }
+    }
+}
