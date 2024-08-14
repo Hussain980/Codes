@@ -1,0 +1,136 @@
+public class Application {
+    public static void main(String[] args) {
+        CsvToJsonProcessor processor = new CsvToJsonProcessor();
+        String csvFilePath = "path/to/your/data.csv";
+        String outputDirectory = "path/to/output/directory";
+
+        try {
+            processor.processCsvToJson(csvFilePath, outputDirectory);
+        } catch (IOException | CsvException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+---------------------------------------------------
+
+import com.opencsv.exceptions.CsvException;
+
+import java.io.IOException;
+import java.util.List;
+
+public class CsvToJsonProcessor {
+
+    private final CsvReaderService csvReaderService;
+    private final JsonPopulatorService jsonPopulatorService;
+
+    public CsvToJsonProcessor() {
+        this.csvReaderService = new CsvReaderService();
+        this.jsonPopulatorService = new JsonPopulatorService();
+    }
+
+    public void processCsvToJson(String csvFilePath, String outputDirectory) throws IOException, CsvException {
+        // Read CSV file
+        List<String[]> csvRecords = csvReaderService.readCsv(csvFilePath);
+
+        // Populate JSON from CSV records and write to files
+        jsonPopulatorService.populateJsonFromCsvAndWriteToFile(csvRecords, outputDirectory);
+    }
+}
+
+
+----------------------------------------------
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.List;
+
+public class JsonPopulatorService {
+
+    private final ObjectMapper objectMapper;
+
+    public JsonPopulatorService() {
+        this.objectMapper = new ObjectMapper();
+    }
+
+    public void populateJsonFromCsvAndWriteToFile(List<String[]> csvRecords, String outputDirectory) throws IOException {
+        // Assuming the first row of the CSV contains the headers
+        String[] headers = csvRecords.get(0);
+
+        // Iterate over each CSV record (excluding headers)
+        for (int i = 1; i < csvRecords.size(); i++) {
+            String[] record = csvRecords.get(i);
+
+            // Create the root JSON object
+            ObjectNode rootNode = objectMapper.createObjectNode();
+            rootNode.put("live", "false");
+
+            // Create the notificationItems array
+            ArrayNode notificationItemsArray = objectMapper.createArrayNode();
+
+            // Create the NotificationRequestItem object
+            ObjectNode notificationRequestItemNode = objectMapper.createObjectNode();
+
+            // Create and populate the additionalData object
+            ObjectNode additionalDataNode = objectMapper.createObjectNode();
+            additionalDataNode.put("recurring.recurringDetailReference", record[getIndex(headers, "recurringDetailReference")]);
+            additionalDataNode.put("recurring.shopperReference", record[getIndex(headers, "shopperReference")]);
+
+            // Create and populate the amount object
+            ObjectNode amountNode = objectMapper.createObjectNode();
+            amountNode.put("currency", record[getIndex(headers, "currency")]);
+            amountNode.put("value", Integer.parseInt(record[getIndex(headers, "value")]));
+
+            // Populate the NotificationRequestItem object
+            notificationRequestItemNode.set("additionalData", additionalDataNode);
+            notificationRequestItemNode.set("amount", amountNode);
+            notificationRequestItemNode.put("eventCode", record[getIndex(headers, "eventCode")]);
+            notificationRequestItemNode.put("eventDate", record[getIndex(headers, "eventDate")]);
+            notificationRequestItemNode.put("merchantAccountCode", record[getIndex(headers, "merchantAccountCode")]);
+            notificationRequestItemNode.put("merchantReference", record[getIndex(headers, "merchantReference")]);
+            notificationRequestItemNode.put("paymentMethod", record[getIndex(headers, "paymentMethod")]);
+            notificationRequestItemNode.put("pspReference", record[getIndex(headers, "pspReference")]);
+            notificationRequestItemNode.put("reason", record[getIndex(headers, "reason")]);
+            notificationRequestItemNode.put("success", record[getIndex(headers, "success")]);
+
+            // Add operations array
+            ArrayNode operationsArray = objectMapper.createArrayNode();
+            operationsArray.add("CANCEL");
+            operationsArray.add("CAPTURE");
+            operationsArray.add("REFUND");
+            notificationRequestItemNode.set("operations", operationsArray);
+
+            // Wrap NotificationRequestItem in an object and add to the notificationItems array
+            ObjectNode notificationItemWrapper = objectMapper.createObjectNode();
+            notificationItemWrapper.set("NotificationRequestItem", notificationRequestItemNode);
+            notificationItemsArray.add(notificationItemWrapper);
+
+            // Add notificationItems array to root node
+            rootNode.set("notificationItems", notificationItemsArray);
+
+            // Convert the root node to a JSON string
+            String jsonString = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode);
+
+            // Write JSON string to a file
+            String fileName = outputDirectory + "/notification_" + i + ".json";
+            try (FileWriter file = new FileWriter(fileName)) {
+                file.write(jsonString);
+            }
+        }
+    }
+
+    // Helper method to find the index of a header in the CSV
+    private int getIndex(String[] headers, String headerName) {
+        for (int i = 0; i < headers.length; i++) {
+            if (headers[i].equals(headerName)) {
+                return i;
+            }
+        }
+        throw new IllegalArgumentException("Header not found: " + headerName);
+    }
+}
